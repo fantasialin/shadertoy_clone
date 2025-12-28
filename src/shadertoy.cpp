@@ -8,6 +8,13 @@
 #include <fstream>
 #include <sstream>
 
+#include <string>
+#include <list>
+#include <map>
+#include "Fonts/Fonts.h"
+
+std::map<std::string,ImFont*> Fonts;  // font map
+
 static void glfw_error_callback(int error, const char* description) {
     std::cerr << "GLFW Error " << error << ": " << description << std::endl;
 }
@@ -226,6 +233,15 @@ int main() {
 
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
+
+    ImGuiIO* m_io = nullptr;
+    m_io = &ImGui::GetIO();
+    auto target_font_size = 25.0f;
+    ImFontConfig font_cfg;
+    font_cfg.FontDataOwnedByAtlas = false;
+
+    std::string font_name("Roboto Regular");
+    Fonts[font_name] = m_io->Fonts->AddFontFromMemoryTTF(Roboto_Regular_ttf, Roboto_Regular_ttf_len, target_font_size, &font_cfg);
 
     // Fullscreen quad
     float quad[] = { -1,-1, 1,-1, -1,1, 1,1 };
