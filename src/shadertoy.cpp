@@ -49,81 +49,6 @@ void main()
 }
 )";
 
-class ShaderEditor {
-public:
-    std::string code;
-    GLuint program = 0;
-    std::string lastError;
-    bool needsRecompile = true;
-
-    ShaderEditor() {
-        code = defaultFragmentShader;
-        compile();
-    }
-
-    ~ShaderEditor() {
-        if (program) glDeleteProgram(program);
-    }
-
-    bool compile() {
-        if (!needsRecompile) return true;
-
-        const char* vertexSrc = R"(
-        #version 330 core
-        layout(location = 0) in vec2 aPos;
-        void main() { gl_Position = vec4(aPos, 0.0, 1.0); }
-        )";
-
-        GLuint vs = glCreateShader(GL_VERTEX_SHADER);
-        glShaderSource(vs, 1, &vertexSrc, nullptr);
-        glCompileShader(vs);
-
-        GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
-        const char* codeptr = (const char*)code.c_str();
-        glShaderSource(fs, 1, &codeptr, nullptr);
-        glCompileShader(fs);
-
-        GLint success;
-        char infoLog[512];
-
-        glGetShaderiv(fs, GL_COMPILE_STATUS, &success);
-        if (!success) {
-            glGetShaderInfoLog(fs, 512, nullptr, infoLog);
-            lastError = std::string("Fragment shader compilation failed:\n") + infoLog;
-            glDeleteShader(vs);
-            glDeleteShader(fs);
-            needsRecompile = false;
-            return false;
-        }
-
-        GLuint newProgram = glCreateProgram();
-        glAttachShader(newProgram, vs);
-        glAttachShader(newProgram, fs);
-        glLinkProgram(newProgram);
-
-        glGetProgramiv(newProgram, GL_LINK_STATUS, &success);
-        if (!success) {
-            glGetProgramInfoLog(newProgram, 512, nullptr, infoLog);
-            lastError = std::string("Program linking failed:\n") + infoLog;
-            glDeleteProgram(newProgram);
-            glDeleteShader(vs);
-            glDeleteShader(fs);
-            needsRecompile = false;
-            return false;
-        }
-
-        if (program) glDeleteProgram(program);
-        program = newProgram;
-
-        glDeleteShader(vs);
-        glDeleteShader(fs);
-        lastError = "Shader compiled successfully!";
-        needsRecompile = false;
-        return true;
-    }
-};
-
-
 class ShaderFBO {
   public:
     inline ShaderFBO() {}
@@ -199,6 +124,80 @@ class ShaderFBO {
     unsigned int height ={0};
     GLuint FBO_id = {0};
     GLuint ColorTexture_id = {0};
+};
+
+class ShaderEditor {
+public:
+    std::string code;
+    GLuint program = 0;
+    std::string lastError;
+    bool needsRecompile = true;
+
+    ShaderEditor() {
+        code = defaultFragmentShader;
+        compile();
+    }
+
+    ~ShaderEditor() {
+        if (program) glDeleteProgram(program);
+    }
+
+    bool compile() {
+        if (!needsRecompile) return true;
+
+        const char* vertexSrc = R"(
+        #version 330 core
+        layout(location = 0) in vec2 aPos;
+        void main() { gl_Position = vec4(aPos, 0.0, 1.0); }
+        )";
+
+        GLuint vs = glCreateShader(GL_VERTEX_SHADER);
+        glShaderSource(vs, 1, &vertexSrc, nullptr);
+        glCompileShader(vs);
+
+        GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
+        const char* codeptr = (const char*)code.c_str();
+        glShaderSource(fs, 1, &codeptr, nullptr);
+        glCompileShader(fs);
+
+        GLint success;
+        char infoLog[512];
+
+        glGetShaderiv(fs, GL_COMPILE_STATUS, &success);
+        if (!success) {
+            glGetShaderInfoLog(fs, 512, nullptr, infoLog);
+            lastError = std::string("Fragment shader compilation failed:\n") + infoLog;
+            glDeleteShader(vs);
+            glDeleteShader(fs);
+            needsRecompile = false;
+            return false;
+        }
+
+        GLuint newProgram = glCreateProgram();
+        glAttachShader(newProgram, vs);
+        glAttachShader(newProgram, fs);
+        glLinkProgram(newProgram);
+
+        glGetProgramiv(newProgram, GL_LINK_STATUS, &success);
+        if (!success) {
+            glGetProgramInfoLog(newProgram, 512, nullptr, infoLog);
+            lastError = std::string("Program linking failed:\n") + infoLog;
+            glDeleteProgram(newProgram);
+            glDeleteShader(vs);
+            glDeleteShader(fs);
+            needsRecompile = false;
+            return false;
+        }
+
+        if (program) glDeleteProgram(program);
+        program = newProgram;
+
+        glDeleteShader(vs);
+        glDeleteShader(fs);
+        lastError = "Shader compiled successfully!";
+        needsRecompile = false;
+        return true;
+    }
 };
 
 int main() {

@@ -1,0 +1,119 @@
+// https://www.shadertoy.com/view/3tKyzz
+#version 330 core
+out vec4 fragColor;
+
+uniform vec3 iResolution;   // viewport resolution (in pixels)
+uniform float iTime;        // shader playback time (in seconds)
+uniform vec4 iMouse;        // xy: current (if MLB down), zw: click
+
+float rand(vec2 p) {
+    p = fract(p * vec2(321.456, 876.789));
+    p += dot(p, p+32.56);
+    return fract(p.x*p.y);
+}
+
+vec2 rand2(vec2 p) {
+    float n = rand(p);
+    return vec2(n, rand(p+n));
+}
+
+vec2 pointPos(vec2 id) {
+    vec2 circleCenter;
+    vec2 r = rand2(id);
+    circleCenter.x = sin((iTime+123.123)*r.x);
+    circleCenter.y = cos((iTime+123.123)*r.y);
+    circleCenter *= 0.4;
+    return circleCenter;
+}
+
+
+float distToLine(vec2 p ,vec2 a, vec2 b) {
+    vec2 pa = p-a;
+    vec2 ba = b-a;
+    float t = clamp(dot(pa,ba)/dot(ba,ba), 0., 1.);
+    return length(pa-ba*t);
+}
+
+float drawLine(vec2 p ,vec2 a, vec2 b) {
+    float dist = distToLine(p, a, b);
+    float w = 1. - step(0.01, dist);
+    w *= smoothstep(1.2, 0.8, length(a-b));
+    return w;
+}
+
+
+vec3 layer(vec2 uv) {
+    vec2 gv = fract(uv) - 0.5;
+    vec2 id = floor(uv);
+    
+    vec3 pixelColor = vec3(0.0);
+    
+    float gridLine = step(0.48, gv.x) + step(0.48, gv.y);
+    
+    vec2 circleCenter = pointPos(id);
+         
+    float circle = (1. - step(.03, length(circleCenter-gv)));
+    pixelColor += circle;
+    
+    
+    float line = 0.;
+    vec2 centerPoints[9];
+    for(int i=-1;i<2;i++) {
+        for(int j=-1;j<2;j++) {
+            vec2 offs = vec2(j,i);
+            vec2 nowId = id+offs;
+            
+            vec2 nowCircleCenter = pointPos(nowId) + offs;
+            centerPoints[(i+1)*3 + (j+1)] = nowCircleCenter;
+            line += drawLine(gv, centerPoints[(i+1)*3 + (j+1)], circleCenter);
+        }
+    }
+    line += drawLine(gv, centerPoints[1], centerPoints[3]);
+    line += drawLine(gv, centerPoints[1], centerPoints[5]);
+    line += drawLine(gv, centerPoints[7], centerPoints[3]);
+    line += drawLine(gv, centerPoints[7], centerPoints[5]);
+    
+    pixelColor += line;
+    
+    // pixelColor += gridLine*0.1;
+    
+    pixelColor = vec3(min(1., pixelColor.x));
+    
+    return pixelColor;
+}
+
+void main()
+{
+    // -1~1
+    vec2 uv = (gl_FragCoord.xy-0.5*iResolution.xy)/iResolution.y;
+    vec2 c_uv = uv;
+    
+    //vec2 mouse = iMouse.xy/iResolution.xy - .5;
+    //uv+=mouse*.5;
+    
+    // rotate
+    float radian = fract(iTime*.03) * 3.1415926 * 2.;
+    float s = sin(radian);
+    float c = cos(radian);
+    mat2 rotate = mat2(c, -s, s, c);
+    uv *= rotate;
+    
+    vec3 pixelColor;
+    
+    // draw each layer with zoom and opacity
+    for(int i=0;i<4;i++) {
+        float move = 10. - fract(iTime*.2+float(i)/4.) * 10.; // 10~0;
+        float opacity = smoothstep(10., 8. , move) * smoothstep(0., 2. , move);
+        float color = move/10.;
+        pixelColor += layer(uv*move*2.+float(i)*20.2) * opacity ;
+    }
+    
+    // add color
+    float r = sin(iTime)*.3 + .7;
+    pixelColor += vec3(.1);
+    pixelColor *= vec3(r, uv.x+.5, uv.y+.5);
+    
+    
+    // Output to screen
+    fragColor = vec4(pixelColor, 1.0);
+}

@@ -1,0 +1,317 @@
+#version 330 core
+out vec4 fragColor;
+
+uniform vec3 iResolution;   // viewport resolution (in pixels)
+uniform float iTime;        // shader playback time (in seconds)
+uniform vec4 iMouse;        // xy: current (if MLB down), zw: click
+uniform float iFrame;
+
+float sdCube(vec3 p, float halfSize) {
+    vec3 d = abs(p) - halfSize;
+    return length(max(d, 0.0)) + min(max(d.x, max(d.y, d.z)), 0.0);
+}
+
+//------------------------------------------------------------------
+
+vec2 opU( vec2 d1, vec2 d2 )
+{
+	return (d1.x<d2.x) ? d1 : d2;
+}
+
+//------------------------------------------------------------------
+
+#define ZERO (min(iFrame,0))
+
+//------------------------------------------------------------------
+// add const for performane
+
+const int pixels[289] = int[289] (
+0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,
+0,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,0,
+0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,
+0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,
+0,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,0,
+0,1,1,1,1,1,1,2,1,1,2,2,1,1,1,1,0,
+0,1,1,1,1,1,2,1,1,2,2,2,2,1,1,1,0,
+0,1,1,1,3,3,3,1,2,2,2,3,3,3,1,1,0,
+0,1,1,3,8,4,2,2,2,2,2,8,4,3,1,1,0,
+1,1,1,2,4,4,2,2,2,2,2,4,4,3,1,1,0,
+1,1,1,2,4,4,2,2,2,2,2,4,4,3,1,1,1,
+1,1,1,2,5,5,5,2,2,2,2,5,5,5,1,1,1,
+1,1,1,2,2,2,2,2,2,2,2,2,2,2,1,1,1,
+0,1,1,1,2,2,2,2,2,2,2,2,2,1,1,1,0,
+0,0,1,2,1,6,6,7,7,7,6,6,1,1,1,0,0,
+0,0,0,6,6,6,6,7,8,7,6,6,6,0,0,0,0,
+0,0,0,6,6,6,6,6,6,6,6,6,6,6,0,0,0
+);
+
+const vec3 colorLookup[9] = vec3[9] (
+vec3(1.0, 1.0, 1.0),
+vec3(0.78, 0.443, 0.42),
+vec3(0.976, 0.925, 0.867),
+vec3(0.0, 0.0, 0.0),
+vec3(0.667, 0.502, 0.867),
+vec3(0.969, 0.855, 0.8),
+vec3(0.176, 0.212, 0.412),
+vec3(0.463, 0.714, 0.871),
+vec3(1.0, 1.0, 1.0)
+);
+
+
+const float space = 0.006;
+const float size_half = 0.05; 
+const float s = (size_half + space) * 2.0;
+
+vec2 DrawCube(int x, int z, vec3 pos)
+{
+    vec2 ret = vec2(0.0, -1);
+    
+    if (x < 0 || x >= 17 || z >= 17 || z < 0)
+        return ret;
+
+    int index = int(x * 17 + z);
+    
+    int v = pixels[index];
+
+    if (v != 0)
+    {
+        float y = 0.05;
+        if (v == 1)
+        {
+            float time = 32.0 + iTime*0.01;
+            y = 0.05 + step(sin(0.3 + float(x*z)*time), 0.5) * size_half * 2.0 ;
+        }
+        float x_offset = float(x) * s; 
+        float z_offset = float(z) * s; 
+
+        ret = vec2( sdCube(pos-vec3( 0.0 + x_offset, y, z_offset), size_half ), float(v));
+    }
+    return ret;
+}
+
+vec2 map( in vec3 pos )
+{
+    vec2 res = vec2( pos.y, 0.0 );
+    
+    
+    int x = int(pos.x / s);
+    int z = int(pos.z / s);
+    
+    if (x < 0 || x >= 17 || z >= 17 || z < 0)
+        return res;
+    
+    
+        
+    for (int i = -1; i <=1 ; ++i)
+    {
+        for (int j = -1; j <= 1; ++j)
+        {
+            vec2 cube0 = DrawCube(x + i, z + j, pos);
+    
+            if (cube0.y > 0.0)
+            {
+                res = opU(res, cube0);
+            }
+        }
+    }
+    
+
+    return res;
+}
+
+
+// https://iquilezles.org/articles/boxfunctions
+vec2 iBox( in vec3 ro, in vec3 rd, in vec3 rad ) 
+{
+    vec3 m = 1.0/rd;
+    vec3 n = m*ro;
+    vec3 k = abs(m)*rad;
+    vec3 t1 = -n - k;
+    vec3 t2 = -n + k;
+	return vec2( max( max( t1.x, t1.y ), t1.z ),
+	             min( min( t2.x, t2.y ), t2.z ) );
+}
+
+vec2 raycast( in vec3 ro, in vec3 rd )
+{
+    vec2 res = vec2(-1.0,-1.0);
+
+    float tmin = 1.0;
+    float tmax = 20.0;
+
+    // raytrace floor plane
+    float tp1 = (0.0-ro.y)/rd.y;
+    if( tp1>0.0 )
+    {
+        tmax = min( tmax, tp1 );
+        res = vec2( tp1, 0.3 );
+    }
+    //else return res;
+    
+    // raymarch primitives   
+    vec2 tb = iBox( ro-vec3(0.0,0.4,-0.5), rd, vec3(2.0,0.41,2.4) );
+    if( tb.x<tb.y && tb.y>0.0 && tb.x<tmax)
+    {
+        //return vec2(tb.x,2.0);
+        tmin = max(tb.x,tmin);
+        tmax = min(tb.y,tmax);
+
+        float t = tmin;
+        for( int i=0; i<70 && t<tmax; i++ )
+        {
+            vec2 h = map( ro+rd*t );
+            if( abs(h.x)<(0.0001*t) )
+            { 
+                res = vec2(t,h.y); 
+                break;
+            }
+            t += h.x;
+        }
+    }
+    
+    return res;
+}
+
+// https://iquilezles.org/articles/normalsSDF
+vec3 calcNormal( in vec3 pos )
+{
+
+    vec2 e = vec2(1.0,-1.0)*0.5773*0.0005;
+    return normalize( e.xyy*map( pos + e.xyy ).x + 
+					  e.yyx*map( pos + e.yyx ).x + 
+					  e.yxy*map( pos + e.yxy ).x + 
+					  e.xxx*map( pos + e.xxx ).x );
+}
+
+// https://iquilezles.org/articles/rmshadows
+float calcSoftshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
+{
+    // bounding volume
+    float tp = (0.8-ro.y)/rd.y; if( tp>0.0 ) tmax = min( tmax, tp );
+
+    float res = 1.0;
+    float t = mint;
+    for( int i=0; i<24; i++ )
+    {
+		float h = map( ro + rd*t ).x;
+        float s = clamp(8.0*h/t,0.0,1.0);
+        res = min( res, s );
+        t += clamp( h, 0.001, 0.2 );
+        if( res<0.04 || t>tmax ) break;
+    }
+    res = clamp( res, 0.0, 1.0 );
+    return mix(1.0, res*res*(3.0-2.0*res), 0.4);
+}
+
+
+// https://iquilezles.org/articles/checkerfiltering
+float checkersGradBox( in vec2 p, in vec2 dpdx, in vec2 dpdy )
+{
+    // filter kernel
+    vec2 w = abs(dpdx)+abs(dpdy) + 0.001;
+    // analytical integral (box filter)
+    vec2 i = 2.0*(abs(fract((p-0.5*w)*0.5)-0.5)-abs(fract((p+0.5*w)*0.5)-0.5))/w;
+    // xor pattern
+    return 0.5 - 0.5*i.x*i.y;                  
+}
+
+vec3 render( in vec3 ro, in vec3 rd, in vec3 rdx, in vec3 rdy )
+{ 
+    // background
+    vec3 col = vec3(0.7, 0.7, 0.9) - max(rd.y,0.0)*0.3;
+    
+    // raycast scene
+    vec2 res = raycast(ro,rd);
+    float t = res.x;
+	float m = res.y;
+    if( m>-0.5 )
+    {
+        vec3 pos = ro + t*rd;
+        vec3 nor = (m<0.5) ? vec3(0.0,1.0,0.0) : calcNormal( pos );
+        
+        
+        // material 
+        col = colorLookup[int(m)];
+        
+        if( m<0.5 )
+        {
+            // project pixel footprint into the plane
+            vec3 dpdx = ro.y*(rd/rd.y-rdx/rdx.y);
+            vec3 dpdy = ro.y*(rd/rd.y-rdy/rdy.y);
+
+            float f = checkersGradBox( 3.0*pos.xz, 3.0*dpdx.xz, 3.0*dpdy.xz );
+            col = 0.15 + f*vec3(0.25);
+        }
+        
+       
+        
+		vec3 lin = vec3(0.0);
+
+        // sun
+        {
+            vec3  lig = normalize( vec3(0.3, 0.4, 0.7) );
+            vec3  hal = normalize( lig-rd );
+            float dif = clamp( dot( nor, lig ), 0.0, 1.0 );
+            dif *= calcSoftshadow( pos, lig, 0.02, 2.5 );
+           
+        
+            lin += col*2.20*dif;
+        }
+        
+
+		col = lin;
+    }
+
+	return vec3( clamp(col,0.0,1.0) );
+}
+
+mat3 setCamera( in vec3 ro, in vec3 ta, float cr )
+{
+	vec3 cw = normalize(ta-ro);
+	vec3 cp = vec3(sin(cr), cos(cr),0.0);
+	vec3 cu = normalize( cross(cw,cp) );
+	vec3 cv =          ( cross(cu,cw) );
+    return mat3( cu, cv, cw );
+}
+
+void main()
+{
+    vec2 mo = iMouse.xy/iResolution.xy;
+	float time = 32.0 + iTime*1.5;
+
+    // camera	
+    vec3 ta = vec3( 0, -0.75, 0 );
+    vec3 ro = ta + vec3( 3.5, 5.2, 3.5*sin(7.0*-mo.x) );
+    // camera-to-world transformation
+    mat3 ca = setCamera( ro, ta, 0.0 );
+
+    vec3 tot = vec3(0.0);
+  
+    vec2 p = (2.0*gl_FragCoord.xy-iResolution.xy)/iResolution.y;
+
+    // focal length
+    const float fl = 2.5;
+
+    // ray direction
+    vec3 rd = ca * normalize( vec3(p,fl) );
+
+     // ray differentials
+    vec2 px = (2.0*(gl_FragCoord.xy+vec2(1.0,0.0))-iResolution.xy)/iResolution.y;
+    vec2 py = (2.0*(gl_FragCoord.xy+vec2(0.0,1.0))-iResolution.xy)/iResolution.y;
+    vec3 rdx = ca * normalize( vec3(px,fl) );
+    vec3 rdy = ca * normalize( vec3(py,fl) );
+
+    // render	
+    vec3 col = render( ro, rd, rdx, rdy );
+
+    // gain
+    //col = col*3.0/(2.5+col);
+
+    // gamma
+    //col = pow( col, vec3(0.4545) );
+
+    tot += col;
+
+    
+    fragColor = vec4( tot, 1.0 );
+}

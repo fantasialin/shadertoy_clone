@@ -1,0 +1,67 @@
+// https://www.shadertoy.com/view/WlVyzR
+#version 330 core
+out vec4 fragColor;
+
+uniform vec3 iResolution;   // viewport resolution (in pixels)
+uniform float iTime;        // shader playback time (in seconds)
+uniform vec4 iMouse;        // xy: current (if MLB down), zw: click
+
+void main()
+{
+    // -1~1
+    vec2 uv = (gl_FragCoord.xy-0.5*iResolution.xy)/iResolution.y;
+    vec2 c_uv = uv;
+    
+    //float radian = 0.785;
+    float radian = fract(iTime*.01) * 3.1415926 * 2.;
+    float s = sin(radian);
+    float c = cos(radian);
+    mat2 rotate = mat2(c, -s, s, c);
+    uv *= rotate;
+    
+    // 5~25
+    float zoom = 5. + (sin(iTime*.1)+1.)*10.;
+    
+    uv *= zoom;
+    uv += .5;
+
+    vec2 gv = fract(uv) - 0.5;
+    vec2 id = floor(uv);
+    
+    vec3 pixelColor = vec3(0.0);
+    
+    
+    float gridLine = step(0.48, gv.x) + step(0.48, gv.y);
+    
+    float circle = 0.;
+    
+    float aniSpeed = 1.;
+    float waveSpeed = .3;
+    
+    for(int i=-2;i<3;i++) {
+        for(int j=-2;j<3;j++) {
+            vec2 offs = vec2(j,i);
+            vec2 nowId = id+offs;
+            
+            float wave = (sin(-iTime*aniSpeed+length(nowId)*waveSpeed)+1.)/2.; // 0~1;
+            float cRadius = .2 + wave*1.5; // 0.2~1.7;
+            
+            float isWhite = (1. - step(cRadius, length(gv-offs)));
+            
+            // XOR
+            circle = circle + isWhite - 2.*circle*isWhite;
+        }
+    }
+
+    //pixelColor += circle;
+    
+    vec3 backColor = vec3(.1);
+    vec3 circleColor = vec3(.5-c_uv.x,.5,.5-c_uv.y) + vec3(1.-length(c_uv),0.,0.);
+    pixelColor += backColor * (1. - circle) + circleColor * circle;
+    
+    
+    //pixelColor += gridLine;
+    
+    // Output to screen
+    fragColor = vec4(pixelColor, 1.0);
+}

@@ -1,0 +1,35 @@
+#version 330 core
+out vec4 fragColor;
+
+uniform vec3 iResolution;   // viewport resolution (in pixels)
+uniform float iTime;        // shader playback time (in seconds)
+uniform vec4 iMouse;        // xy: current (if MLB down), zw: click
+
+vec2 rotate(vec2 uv, float th) {
+  return mat2(cos(th), sin(th), -sin(th), cos(th)) * uv;
+}
+
+vec3 sdfSquare(vec2 uv, float size, vec2 offset) {
+  float x = uv.x - offset.x;
+  float y = uv.y - offset.y;
+  vec2 rotated = rotate(vec2(x,y), iTime);
+  float d = max(abs(rotated.x), abs(rotated.y)) - size;
+
+  return d > 0. ? vec3(1.) : 0.5 + 0.5 * cos(iTime + uv.xyx + vec3(0,2,4));
+
+}
+void main()
+{
+    // Normalized pixel coordinates (from 0 to 1)
+    vec2 uv = gl_FragCoord.xy / iResolution.xy;
+
+	uv -= 0.5; // <-0.5, 0.5>
+    uv.x *= iResolution.x/iResolution.y; // fix aspect ratio
+   
+    vec2 offset = vec2(sin(iTime*2.)*0.2, cos(iTime*2.)*0.2); // move the circle clockwise
+    // vec2 offset = vec2(0.0, 0.0); // roate at center
+
+     vec3 col = sdfSquare(uv, 0.05, offset);
+
+    fragColor = vec4(col, 1.0);
+}
