@@ -79,5 +79,5 @@ void main(void){
 	arcLine(q * vec2(1.5, 1.0), vec2(0.35, 0.07), 0.125, 0.145, -0.3, 0.1, eyesColor, destColor);
 	arcLine(q * vec2(1.5, 1.0), vec2(-0.35, 0.07), 0.125, 0.145, 0.3, 0.1, eyesColor, destColor);	
 	arcLine(q * vec2(0.9, 1.0), vec2(0.0, -0.15), 0.2, 0.22, PI, 0.055, lineColor, destColor);
-	gl_FragColor = vec4(destColor, 1.0);
+	fragColor = vec4(destColor, 1.0);
 }

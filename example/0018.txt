@@ -119,5 +119,5 @@ void main(void){
 	arcLine(q * vec2(-0.9, 1.0), vec2(0.1, -0.14), 0.1, 0.12, PI, 0.05, lineColor, destColor);
 	arcLine(q * vec2(0.9, 1.0), vec2(0.1, -0.14), 0., 0.1, PI, -0.55, body, destColor);
 	arcLine(q * vec2(-0.9, 1.0), vec2(0.1, -0.14), 0., 0.1, PI, -0., body, destColor);
-	gl_FragColor = vec4(destColor, 1.0);
+	fragColor = vec4(destColor, 1.0);
 }
