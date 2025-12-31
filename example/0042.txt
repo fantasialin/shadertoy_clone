@@ -67,7 +67,7 @@ vec3 calcNormal( in vec3 pos )
 					  e.xxx*map( pos + e.xxx*eps ) );
 }
     
-#if HW_PERFORMANCE==0
+#if 1 //HW_PERFORMANCE==0
 #define AA 1
 #else
 #define AA 3
