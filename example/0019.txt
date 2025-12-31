@@ -10,7 +10,7 @@ uniform vec4 iMouse;        // xy: current (if MLB down), zw: click
 precision mediump float;
 #endif
 
-#extension GL_OES_standard_derivatives : enable
+//#extension GL_OES_standard_derivatives : enable
 
 // reference
 // https://qiita.com/doxas/items/a366eafc498c8269934c
