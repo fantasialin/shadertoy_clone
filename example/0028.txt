@@ -1,0 +1,63 @@
+// https://inspirnathan.com/posts/51-shadertoy-tutorial-part-5
+#version 330 core
+out vec4 fragColor;
+
+uniform vec3 iResolution;   // viewport resolution (in pixels)
+uniform float iTime;        // shader playback time (in seconds)
+uniform vec4 iMouse;        // xy: current (if MLB down), zw: click
+
+float sdHeart(vec2 uv, float size, vec2 offset) {
+  float x = uv.x - offset.x;
+  float y = uv.y - offset.y;
+  float xx = x * x;
+  float yy = y * y;
+  float yyy = yy * y;
+  float group = xx + yy - size;
+  float d = group * group * group - xx * yyy;
+
+  return d;
+}
+
+float sdHeart_pow(vec2 uv, float size, vec2 offset) {
+  float x = uv.x - offset.x;
+  float y = uv.y - offset.y;
+  float group = pow(x,2.) + pow(y,2.) - size;
+  float d = pow(group,3.) - pow(x,2.) * pow(y,3.);
+
+  return d;
+}
+
+float sdHeart_dot(vec2 uv, float size, vec2 offset) {
+  float x = uv.x - offset.x;
+  float y = uv.y - offset.y;
+  float group = dot(x,x) + dot(y,y) - size;
+  float d = group * dot(group, group) - dot(x,x) * dot(y,y) * y;
+
+  return d;
+}
+
+vec3 drawScene(vec2 uv) {
+  vec3 col = vec3(1);
+  float heart = 0.;
+  //heart = sdHeart(uv, 0.04, vec2(0));
+  //heart = sdHeart_pow(uv, 0.04, vec2(0));
+  heart = sdHeart_dot(uv, 0.04, vec2(0));
+
+  col = mix(vec3(1, 0, 0), col, step(0., heart));
+
+  return col;
+}
+
+void main() {
+
+  vec2 uv = gl_FragCoord.xy/iResolution.xy; // <0,1>
+  //uv = fract(uv * 2.0);//cut to 2 segments
+
+  uv -= 0.5; // <-0.5,0.5>
+  uv.x *= iResolution.x/iResolution.y; // fix aspect ratio
+
+  vec3 col = drawScene(uv);
+
+  // Output to screen
+  fragColor = vec4(col,1.0);
+}

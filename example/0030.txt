@@ -1,0 +1,88 @@
+// https://inspirnathan.com/posts/51-shadertoy-tutorial-part-5
+#version 330 core
+out vec4 fragColor;
+
+uniform vec3 iResolution;   // viewport resolution (in pixels)
+uniform float iTime;        // shader playback time (in seconds)
+uniform vec4 iMouse;        // xy: current (if MLB down), zw: click
+
+float dot2( in vec2 v ) { return dot(v,v); }
+float dot2( in vec3 v ) { return dot(v,v); }
+float ndot( in vec2 a, in vec2 b ) { return a.x*b.x - a.y*b.y; }
+
+float sdSegment( in vec2 p, in vec2 a, in vec2 b )
+{
+  vec2 pa = p-a, ba = b-a;
+  float h = clamp( dot(pa,ba)/dot(ba,ba), 0.0, 1.0 );
+  return length( pa - ba*h );
+}
+
+float sdBezier( in vec2 pos, in vec2 A, in vec2 B, in vec2 C )
+{
+    vec2 a = B - A;
+    vec2 b = A - 2.0*B + C;
+    vec2 c = a * 2.0;
+    vec2 d = A - pos;
+    float kk = 1.0/dot(b,b);
+    float kx = kk * dot(a,b);
+    float ky = kk * (2.0*dot(a,a)+dot(d,b)) / 3.0;
+    float kz = kk * dot(d,a);
+    float res = 0.0;
+    float p = ky - kx*kx;
+    float p3 = p*p*p;
+    float q = kx*(2.0*kx*kx-3.0*ky) + kz;
+    float h = q*q + 4.0*p3;
+    if( h >= 0.0)
+    {
+        h = sqrt(h);
+        vec2 x = (vec2(h,-h)-q)/2.0;
+        vec2 uv = sign(x)*pow(abs(x), vec2(1.0/3.0));
+        float t = clamp( uv.x+uv.y-kx, 0.0, 1.0 );
+        res = dot2(d + (c + b*t)*t);
+    }
+    else
+    {
+        float z = sqrt(-p);
+        float v = acos( q/(p*z*2.0) ) / 3.0;
+        float m = cos(v);
+        float n = sin(v)*1.732050808;
+        vec3  t = clamp(vec3(m+m,-n-m,n-m)*z-kx,0.0,1.0);
+        res = min( dot2(d+(c+b*t.x)*t.x),
+                   dot2(d+(c+b*t.y)*t.y) );
+        // the third root cannot be the closest
+        // res = min(res,dot2(d+(c+b*t.z)*t.z));
+    }
+    return sqrt( res );
+}
+
+vec3 drawScene(vec2 uv) {
+    vec3 col = vec3(0);
+    float segment = sdSegment(uv, vec2(0, 0), vec2(0, .2));
+
+    //col = mix(vec3(1, 1, 1), col, step(0., segment));
+    //col = mix(vec3(1, 1, 1), col, step(0., segment - 0.02)); // Subtract 0.02 from the returned "signed distance" value of the segment
+    //col = mix(vec3(1, 1, 1), col, smoothstep(0., 0.02, segment));
+
+    vec2 A = vec2(0, 0);
+    vec2 B = vec2(0.2, 0);
+    vec2 C = vec2(0.2, 0.2);
+    float curve = sdBezier(uv, A, B, C);
+    //col = mix(vec3(1, 1, 1), col, step(0., curve - 0.01));
+    col = mix(vec3(1, 1, 1), col, smoothstep(0., 0.01, curve));
+
+    return col;
+}
+
+void main() {
+
+  vec2 uv = gl_FragCoord.xy/iResolution.xy; // <0,1>
+  //uv = fract(uv * 2.0);//cut to 2 segments
+
+  uv -= 0.5; // <-0.5,0.5>
+  uv.x *= iResolution.x/iResolution.y; // fix aspect ratio
+
+  vec3 col = drawScene(uv);
+
+  // Output to screen
+  fragColor = vec4(col,1.0);
+}
