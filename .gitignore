@@ -4,3 +4,8 @@ build_debug.bat
 build_release.bat
 config.bat
 run.cmd
+
+build_debug.sh
+build_release.sh
+config.sh
+shadertoy.sh

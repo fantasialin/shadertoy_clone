@@ -282,7 +282,11 @@ int main() {
         });
         for(auto &f_ : example_entries){
             if (!f_.is_directory()){
+                #if defined(__APPLE__)
+                std::string tmp = root_path + std::string("/") + f_.path().filename().string();
+                #else
                 std::string tmp = root_path + std::string("\\") + f_.path().filename().string();
+                #endif
                 example_.push_back(tmp);
                 if(ENABLE_DEBUG_LOG)
                     std::cout << " " << tmp << "\n";            
