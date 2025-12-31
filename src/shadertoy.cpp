@@ -8,12 +8,23 @@
 #include <fstream>
 #include <sstream>
 
+#include <vector>
+#include <cmath>
+#include <random>
+
+#include <filesystem>  // C++17 standard library
+//#include <windows.h>
+
 #include <string>
 #include <list>
 #include <map>
 #include "Fonts/Fonts.h"
 
+using namespace std;
+
 std::map<std::string,ImFont*> Fonts;  // font map
+
+#define ENABLE_DEBUG_LOG 0
 
 static void glfw_error_callback(int error, const char* description) {
     std::cerr << "GLFW Error " << error << ": " << description << std::endl;
@@ -200,6 +211,31 @@ public:
     }
 };
 
+std::vector<std::filesystem::directory_entry> ListDirectory(const std::string& path)
+{
+    std::vector<std::filesystem::directory_entry> entries;
+    for (const auto& entry : std::filesystem::directory_iterator(path)){
+        entries.push_back(entry);
+    }
+    return entries;
+}
+
+ifstream& open_file(ifstream& in, const char* filename){
+    in.close();
+    in.clear();
+    in.open(filename);
+    return in;
+}
+
+std::vector<char> ReadFile(const char* filename)
+{
+    std::ifstream file(filename, std::ios::binary);
+    return std::vector<char>(
+        std::istreambuf_iterator<char>(file),
+        std::istreambuf_iterator<char>()
+    );
+}
+
 int main() {
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit()) return -1;
@@ -220,6 +256,44 @@ int main() {
     if (glewInit() != GLEW_OK) {
         std::cerr << "Failed to initialize GLEW\n";
         return -1;
+    }
+
+    int selected_example = -1;
+    #define size_shader_code_ 64 * 1024
+    
+    #if defined(__APPLE__)
+    std::string root_path = std::string("./example");
+    #else
+    std::string root_path = std::string(".\\example");
+    #endif
+    std::vector<std::filesystem::directory_entry> example_entries = ListDirectory(root_path);
+    if(ENABLE_DEBUG_LOG)
+        std::cout << "list examples ... " << example_entries.size() << "\n";
+    std::vector<std::string> example_;
+    std::vector<const char*> example_c_strs;
+    example_.reserve(example_entries.size());
+    if (example_entries.size() > 1){
+        //sorting entries: directories first, then files, both alphabetically
+        std::sort(example_entries.begin(), example_entries.end(), [](const std::filesystem::directory_entry& a, const std::filesystem::directory_entry& b) {
+            if (a.is_directory() != b.is_directory()){
+                return a.is_directory() > b.is_directory();
+            }
+            return a.path().filename().string() < b.path().filename().string();
+        });
+        for(auto &f_ : example_entries){
+            if (!f_.is_directory()){
+                std::string tmp = root_path + std::string("\\") + f_.path().filename().string();
+                example_.push_back(tmp);
+                if(ENABLE_DEBUG_LOG)
+                    std::cout << " " << tmp << "\n";            
+            }
+        }
+        example_c_strs.clear();
+        example_c_strs.reserve(example_.size());
+        for (auto& s : example_)
+            example_c_strs.push_back(s.c_str());
+        if(example_c_strs.size()>1)     
+            selected_example = 0;
     }
 
     // Setup ImGui
@@ -344,7 +418,7 @@ int main() {
         ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x * 0.4f, io.DisplaySize.y));
 
         ImGui::Begin("Fragment Shader Editor");
-            static char shaderCode[64 * 1024] = {0};
+            static char shaderCode[size_shader_code_] = {0};
             static bool initialized = false;
             if (!initialized) {
                 strcpy(shaderCode, defaultFragmentShader);
@@ -362,6 +436,35 @@ int main() {
                 editor.code = shaderCode;
                 editor.needsRecompile = true;
             }
+            ImGui::SameLine();
+            if (ImGui::Button("load example")) {
+                bool run_ = false;
+                if(selected_example >= 0 && selected_example <= example_c_strs.size()-1){
+                    std::ifstream in;
+                    if(!open_file(in, example_c_strs[selected_example])){
+                        std::cout << "failed to open " << example_c_strs[selected_example] << endl;
+                    }
+                    else{
+                        memset(shaderCode,0,size_shader_code_);
+                        if(ENABLE_DEBUG_LOG){
+                            for(string line; getline(in, line);){
+                                std::cout << line << endl;
+                            }
+                        }
+                        auto data = ReadFile(example_c_strs[selected_example]);
+                        data.push_back('\0');
+                        if(data.size()<(size_shader_code_ -1)){
+                            memcpy(shaderCode,data.data(), data.size());
+                        }
+                        run_ = true;
+                    }
+                }
+                if(run_){
+                    editor.code = shaderCode;
+                    editor.needsRecompile = true;
+                }
+            }
+            ImGui::Combo("examples",&selected_example, example_c_strs.data(), example_c_strs.size());
 
             // Fixed InputTextMultiline - uses char buffer
             ImGuiInputTextFlags flags = ImGuiInputTextFlags_AllowTabInput;
@@ -380,6 +483,8 @@ int main() {
 
             ImGui::Text("Resolution: %.0f x %.0f | Time: %.2f | FPS: %.1f | mouse x,y %.0f,%.0f | canvas x, y %.0f,%.0f",
                         canvasSize.x, canvasSize.y, time, io.Framerate, mouse.x, mouse.y, canvas_pos.x, canvas_pos.y);
+            if (selected_example >= 0)
+                ImGui::Text("Selected: %s", example_c_strs[selected_example]);
 
         ImGui::End();
 
