@@ -1,0 +1,7 @@
+{
+    "app_name" : "ImGui ShaderToy Clone",
+    "use_default_example" : false,
+    "enable_debug_log" : false,
+    "alternative_example_path" : "the_art_shader",
+    "__end__" : "__end__"
+}

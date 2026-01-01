@@ -15,6 +15,10 @@
 #include <filesystem>  // C++17 standard library
 //#include <windows.h>
 
+#include <fstream>
+#include "json.hpp"
+using nlohmann::json;
+
 #include <string>
 #include <list>
 #include <map>
@@ -24,7 +28,8 @@ using namespace std;
 
 std::map<std::string,ImFont*> Fonts;  // font map
 
-#define ENABLE_DEBUG_LOG 0
+//#define ENABLE_DEBUG_LOG 0
+bool ENABLE_DEBUG_LOG = false;
 
 static void glfw_error_callback(int error, const char* description) {
     std::cerr << "GLFW Error " << error << ": " << description << std::endl;
@@ -239,6 +244,17 @@ std::vector<char> ReadFile(const char* filename)
 int main() {
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit()) return -1;
+	
+	std::ifstream f("app.json");
+    json app_config = json::parse(f);
+    if(ENABLE_DEBUG_LOG)
+        std::cout << app_config.dump() << "\n";
+
+
+    std::string app_name  = app_config["app_name"].get<std::string>();
+    bool use_default_example = app_config["use_default_example"].get<bool>();
+    std::string alternative_example_path = app_config["alternative_example_path"].get<std::string>();
+    bool ENABLE_DEBUG_LOG = app_config["enable_debug_log"].get<bool>();
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -247,7 +263,7 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-    GLFWwindow* window = glfwCreateWindow(1600, 900, "ImGui ShaderToy Clone", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(1600, 900, app_name.c_str(), nullptr, nullptr);
     if (!window) { glfwTerminate(); return -1; }
 
     glfwMakeContextCurrent(window);
@@ -258,21 +274,33 @@ int main() {
         return -1;
     }
 
+    std::string root_path;
     int selected_example = -1;
     #define size_shader_code_ 64 * 1024
-    
-    #if defined(__APPLE__)
-    std::string root_path = std::string("./example");
-    #else
-    std::string root_path = std::string(".\\example");
-    #endif
+    if(use_default_example){
+        #if defined(__APPLE__)
+            root_path = std::string("./example");
+        #else
+            root_path = std::string(".\\example");
+        #endif
+    }
+    else{
+        #if defined(__APPLE__)
+            root_path = std::string("./example/") + alternative_example_path;
+        #else
+            root_path = std::string(".\\example\\") + alternative_example_path;
+        #endif
+    }
+    if(ENABLE_DEBUG_LOG)
+        std::cout << "root path " << root_path << "\n";
+
     std::vector<std::filesystem::directory_entry> example_entries = ListDirectory(root_path);
     if(ENABLE_DEBUG_LOG)
         std::cout << "list examples ... " << example_entries.size() << "\n";
     std::vector<std::string> example_;
     std::vector<const char*> example_c_strs;
     example_.reserve(example_entries.size());
-    if (example_entries.size() > 1){
+    if (example_entries.size() >= 1){
         //sorting entries: directories first, then files, both alphabetically
         std::sort(example_entries.begin(), example_entries.end(), [](const std::filesystem::directory_entry& a, const std::filesystem::directory_entry& b) {
             if (a.is_directory() != b.is_directory()){
