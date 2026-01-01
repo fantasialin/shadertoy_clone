@@ -9,3 +9,4 @@ build_debug.sh
 build_release.sh
 config.sh
 shadertoy.sh
+.DS_store

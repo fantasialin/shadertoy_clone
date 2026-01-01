@@ -3,3 +3,5 @@ shadertoy clone via imgui + GLFW
 
 **screenshot**
 ![running on windows](./doc/screenshot001.png)
+
+![running on macos](./doc/screenshot002.png)
