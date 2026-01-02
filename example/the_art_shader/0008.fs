@@ -5,10 +5,6 @@ uniform vec3 iResolution;   // viewport resolution (in pixels)
 uniform float iTime;        // shader playback time (in seconds)
 uniform vec4 iMouse;        // xy: current (if MLB down), zw: click
 
-#ifdef GL_ES
-precision mediump float;
-#endif
-
 #define PI 3.14159265358979323846
 
 #ifdef GL_ES
