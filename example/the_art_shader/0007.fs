@@ -15,10 +15,6 @@ precision mediump float;
 precision mediump float;
 #endif
 
-uniform vec2 u_resolution;
-uniform vec2 u_mouse;
-uniform float u_time;
-
 #define DRAW_Parabola 1
 
 // Plot a line on Y using a value between 0.0-1.0
