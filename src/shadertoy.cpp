@@ -146,6 +146,7 @@ class ShaderEditor {
 public:
     std::string code;
     GLuint program = 0;
+    ShaderFBO fbo;
     std::string lastError;
     bool needsRecompile = true;
 
@@ -156,6 +157,13 @@ public:
 
     ~ShaderEditor() {
         if (program) glDeleteProgram(program);
+    }
+
+    void create(int width, int height){
+        fbo.init(width, height);
+    }
+    ShaderFBO* get_fbo(){
+        return &this->fbo;
     }
 
     bool compile() {
@@ -359,10 +367,11 @@ int main() {
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
 
-    ShaderFBO shader_fbo;
-    shader_fbo.init(800, 600);
+    //ShaderFBO shader_fbo;
+    //shader_fbo.init(800, 600);
 
     ShaderEditor editor;
+    editor.create(800, 600);
 
     float time = 0.0f;
     ImVec4 mouse = ImVec4(0,0,0,0); // x,y = pos, z = left button down
@@ -413,14 +422,16 @@ int main() {
         static ImVec2 lastSize = ImVec2(0,0);
         if (fabs(canvasSize.x - lastSize.x) > 2 || fabs(canvasSize.y - lastSize.y) > 2) {
             if (canvasSize.x > 0 && canvasSize.y > 0) {
-                shader_fbo.init((unsigned int)canvasSize.x, (unsigned int)canvasSize.y);
+                //shader_fbo.init((unsigned int)canvasSize.x, (unsigned int)canvasSize.y);
+                editor.create((unsigned int)canvasSize.x, (unsigned int)canvasSize.y);
                 lastSize = canvasSize;
             }
         }
 
         // Render shader to FBO
         if (editor.program && editor.compile() && canvasSize.x > 0 && canvasSize.y > 0) {
-            shader_fbo.begin();
+            //shader_fbo.begin();
+            editor.get_fbo()->begin();
             glViewport(0, 0, (GLsizei)canvasSize.x, (GLsizei)canvasSize.y);
             glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT);
@@ -435,11 +446,13 @@ int main() {
             glBindVertexArray(vao);
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-            shader_fbo.end();
+            //shader_fbo.end();
+            editor.get_fbo()->end();
         }
 
         // Display the rendered texture in ImGui
-        ImGui::Image((ImTextureID)(intptr_t)shader_fbo.get_tex_id(), canvasSize, ImVec2(0,1), ImVec2(1,0));
+        //ImGui::Image((ImTextureID)(intptr_t)shader_fbo.get_tex_id(), canvasSize, ImVec2(0,1), ImVec2(1,0));
+        ImGui::Image((ImTextureID)(intptr_t)editor.get_fbo()->get_tex_id(), canvasSize, ImVec2(0,1), ImVec2(1,0));
 
         ImGui::PopStyleVar();
         ImGui::PopStyleColor();
