@@ -1,0 +1,133 @@
+
+//https://www.shadertoy.com/view/WlfGWN
+
+#version 330 core
+out vec4 fragColor;
+
+uniform vec3 iResolution;   // viewport resolution (in pixels)
+uniform float iTime;        // shader playback time (in seconds)
+uniform vec4 iMouse;        // xy: current (if MLB down), zw: click
+
+
+// http://tilings.math.uni-bielefeld.de/substitution/equithirds/
+
+float th = 3.14159265358979323 / 3.;
+float sidelength = 1., r, h;
+
+vec2 n, n2, n3;
+
+vec2 tri1(vec2 p)
+{
+    p.x = abs(p.x);
+    if(dot(p, n) > 0.)
+        p = reflect(p, n);
+    return p;
+}
+
+void main() {
+    // Set up constants
+    
+    n = vec2(cos(th), sin(th));
+    n2 = vec2(cos(-th / 2.), sin(-th / 2.));
+    n3 = vec2(cos(th / 2.), sin(th / 2.));
+
+    r = sidelength / 2. / cos(th / 2.);
+    h = cos(th) * r;
+
+    // Coordinate mapping
+    
+    vec2 uv = gl_FragCoord.xy/iResolution.xy * 2. - 1.;
+    uv.x *= iResolution.x / iResolution.y;
+    vec2 p = uv.xy / 5.;
+
+    p.x += iTime / 20.;
+    
+    float w = 2. * r + sin(th / 2.) * r * 2.;
+
+    // Divide frame in to a grid of hexgons, and divide each of
+    // those hexagons in to six triangles.
+    
+    p.x = mod(p.x, w) - w / 2.;
+    p.y = fract(p.y) - .5;
+    p = abs(p);
+
+    if(dot(p, n2) > 0.)
+        p = reflect(p, n2);
+
+    if(p.y > .5)
+        p.y = 1. - p.y;
+    
+    if(dot(p, n3) < 0.)
+        p = reflect(p, n3);
+
+    p *= (r + h) * 2.;
+    p.y = r - p.y;
+
+
+
+    float tritype = 0.;
+    float prevtritype = tritype;
+
+    float scale = length(fwidth(uv.xy / 2.));
+
+    // Recursively classify the sample point and subdivide
+    
+    int iterations = 7;
+    
+    if(iMouse.z > .5)
+        iterations = 3 + int(iMouse.y / iResolution.y * 6.);
+    
+    for(int i = 0; i < iterations; ++i)
+    {
+        prevtritype = tritype;
+        
+        if(tritype < .5)
+        {
+            p = tri1(p);
+            tritype = 1.;
+        }
+        else
+        {
+            p.x = abs(p.x);
+            
+            if(p.x < -p.y / tan(th))
+            {
+                float base = h / tan(th) * 2.;
+                p /= base;
+                scale /= base;
+                p.y += r;
+                tritype = 0.;
+            }
+            else
+            {
+                p = vec2(dot(p, vec2(n.y, -n.x)), -dot(p, n));
+                p /= r;
+                scale /= r;
+                p.x -= .5;
+                p.y -= h;
+                tritype = 1.;
+            }
+        }
+    }
+
+    float ss = scale * 20., d = 0.;
+
+    if(tritype > .5)
+    {
+        d = min(abs(p.y + h), min(abs(dot(p, n)), abs(dot(p, vec2(-n.x, n.y)))));
+    }
+    else
+    {
+        p = tri1(p);
+        d = abs(p.y + h);
+    }
+
+    // Shade according to which triangle type the point is contained by.
+    
+    fragColor.rgb = mix(vec3(.25, .25, 1) / 2., vec3(1, 1, .5), step(.5, tritype)) *
+        				smoothstep(0., .03 * ss, d - .01 * ss);
+
+    // Gamma correction
+    fragColor.rgb = pow(fragColor.rgb, vec3(1. / 2.2));
+}
+
