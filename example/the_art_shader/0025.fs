@@ -45,5 +45,5 @@ void main(){
 
   d = min(shape(uv,3),shape(uv+vec2(0.,0.19),4));
 
-  gl_FragColor = vec4(vec3(1.0-aastep(.2,d)),1.0);
+  fragColor = vec4(vec3(1.0-aastep(.2,d)),1.0);
 }

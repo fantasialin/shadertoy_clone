@@ -49,5 +49,5 @@ void main(){
   color.rb += smoothstep(size+border,size+1e-7,df)-
               smoothstep(size+0.001,size+1e-7,df);
 
-  gl_FragColor = vec4(color,1.0);
+  fragColor = vec4(color,1.0);
 }

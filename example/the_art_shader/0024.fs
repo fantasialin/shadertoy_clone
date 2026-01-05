@@ -38,5 +38,5 @@ void main(){
     color += vec3(1.,1.,.0)*plot(pct,0.5+smoothstep(-1.,2.,sin(iTime))*.1);
 
 
-    gl_FragColor = vec4( color, 1.0 );
+    fragColor = vec4( color, 1.0 );
 }

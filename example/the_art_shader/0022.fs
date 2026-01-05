@@ -39,5 +39,5 @@ void main(){
 		vec3 color = sdfCircle(uv, 0.45); 
 	#endif
 
-	gl_FragColor = vec4( color, 1.0 );
+	fragColor = vec4( color, 1.0 );
 }
