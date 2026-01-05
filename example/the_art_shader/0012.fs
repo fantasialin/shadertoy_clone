@@ -58,6 +58,7 @@ float polygon(vec2 p, int vertices, float size) {
     return cos(floor(0.5 + a / b) * b - a) * length(p) - size;
 }
 
+// Returns distance field for shape index i
 float getShape(vec2 uv, int i) {
     if (i == 0) {
         return circle(uv, 0.4);
@@ -89,7 +90,10 @@ void main() {
     float f = fract(t0);
     
     uv -= vec2(0.5, 0.5);
+    // smoothedge for anti-aliased edges
     vec3 color = vec3(smoothedge(mix(getShape(uv, i0), getShape(uv, i1), f)));
+
+    color += vec3(uv.x,uv.y,0.0);
     
     fragColor = vec4(color, 1.0);
 }
