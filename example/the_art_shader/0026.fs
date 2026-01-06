@@ -25,5 +25,5 @@ void main() {
     float d = smoothen(distance(uv, p0) * 5.0, distance(uv, p1) * 5.0);
 	float ae = 5.0 / iResolution.y;
     vec3 color = vec3(smoothstep(0.8, 0.8+ae, d));
-    gl_FragColor = vec4(color, 1.0);
+    fragColor = vec4(color, 1.0);
 }

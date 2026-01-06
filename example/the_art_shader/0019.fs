@@ -29,5 +29,5 @@ void main(){
 
     color = vec3( 1.-smoothstep(f,f+0.02,r) );
 
-    gl_FragColor = vec4(color, 1.0);
+    fragColor = vec4(color, 1.0);
 }

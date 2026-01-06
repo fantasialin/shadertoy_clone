@@ -25,5 +25,5 @@ void main(){
 
 	vec3 color = vec3( rect(uv, vec2(0.9) ) );
 
-	gl_FragColor = vec4(color,1.0);
+	fragColor = vec4(color,1.0);
 }
